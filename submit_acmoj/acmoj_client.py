@@ -169,6 +169,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-4. Submit src.hpp content directly (fallback when Git clone fails on OJ):
-   python3 acmoj_client.py --token ${ACMOJ_TOKEN} submit-src --problem-id ${ACMOJ_PROBLEM_ID} --file src.hpp
-   This posts the contents of the given file as the code payload.
