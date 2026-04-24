@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ACMOJ API Client Command Line Tool - Git Submission Version v2.2
+ACMOJ API Client Command Line Tool - Git Submission Version v2.3
 
 Usage Examples:
 1. Submit Git URL:
@@ -95,6 +95,15 @@ class ACMOJClient:
 
         return result
 
+    def submit_code_content(self, problem_id: int, code_text: str) -> Optional[Dict]:
+        # Some OJ setups interpret the 'code' field directly as src.hpp
+        # Use language 'git' to stay consistent with server-side routing.
+        data = {"language": "git", "code": code_text}
+        result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
+        if result and 'id' in result:
+            self._save_submission_id(result['id'])
+        return result
+
     def get_submission_detail(self, submission_id: int) -> Optional[Dict]:
         return self._make_request("GET", f"/submission/{submission_id}")
 
@@ -114,6 +123,11 @@ def main():
     submit_parser.add_argument("--problem-id", type=int, required=True, help="Problem ID")
     submit_parser.add_argument("--git-url", type=str, required=True, help="Git repository URL")
 
+    # Submit src.hpp content directly
+    submit_src_parser = subparsers.add_parser("submit-src", help="Submit src.hpp content directly")
+    submit_src_parser.add_argument("--problem-id", type=int, required=True, help="Problem ID")
+    submit_src_parser.add_argument("--file", type=str, required=True, help="Path to src.hpp content file")
+
     # Sub-command for checking submission status
     status_parser = subparsers.add_parser("status", help="Check submission status")
     status_parser.add_argument("--submission-id", type=int, required=True, help="Submission ID")
@@ -132,6 +146,15 @@ def main():
 
     if args.command == "submit":
         result = client.submit_git(args.problem_id, args.git_url)
+    elif args.command == "submit-src":
+        # Read file content and submit as code
+        try:
+            with open(args.file, 'r') as f:
+                code_text = f.read()
+        except Exception as e:
+            print(f"Error reading file: {e}")
+            return
+        result = client.submit_code_content(args.problem_id, code_text)
     elif args.command == "status":
         result = client.get_submission_detail(args.submission_id)
     elif args.command == "abort":
@@ -146,3 +169,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+4. Submit src.hpp content directly (fallback when Git clone fails on OJ):
+   python3 acmoj_client.py --token ${ACMOJ_TOKEN} submit-src --problem-id ${ACMOJ_PROBLEM_ID} --file src.hpp
+   This posts the contents of the given file as the code payload.
